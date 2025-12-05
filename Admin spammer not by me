@@ -1,0 +1,84 @@
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local player = Players.LocalPlayer
+local ExecuteCommand = ReplicatedStorage:WaitForChild("Packages"):WaitForChild("Net"):WaitForChild("RE/AdminPanelService/ExecuteCommand")
+
+-- GUI setup
+local ScreenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+ScreenGui.Name = "AdminExecutorGUI"
+
+local Frame = Instance.new("Frame", ScreenGui)
+Frame.Size = UDim2.new(0, 250, 0, 300)
+Frame.Position = UDim2.new(0.5, -125, 0.5, -150)
+Frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+Frame.BorderSizePixel = 0
+Frame.Active = true
+Frame.Draggable = true
+
+local Title = Instance.new("TextLabel", Frame)
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.Text = "Player Executor"
+Title.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+Title.TextColor3 = Color3.new(1,1,1)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 14
+
+local ScrollingFrame = Instance.new("ScrollingFrame", Frame)
+ScrollingFrame.Position = UDim2.new(0, 0, 0, 35)
+ScrollingFrame.Size = UDim2.new(1, 0, 0, 230)
+ScrollingFrame.BackgroundTransparency = 1
+ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+ScrollingFrame.ScrollBarThickness = 6
+
+local UIListLayout = Instance.new("UIListLayout", ScrollingFrame)
+UIListLayout.Padding = UDim.new(0, 5)
+
+local ExecuteBtn = Instance.new("TextButton", Frame)
+ExecuteBtn.Size = UDim2.new(1, 0, 0, 30)
+ExecuteBtn.Position = UDim2.new(0, 0, 1, -30)
+ExecuteBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 255)
+ExecuteBtn.TextColor3 = Color3.new(1,1,1)
+ExecuteBtn.Text = "Execute Commands"
+ExecuteBtn.Font = Enum.Font.GothamBold
+ExecuteBtn.TextSize = 14
+
+local selectedPlayer = nil
+
+-- Create player buttons
+local function refreshList()
+    for _, obj in pairs(ScrollingFrame:GetChildren()) do
+        if obj:IsA("TextButton") then obj:Destroy() end
+    end
+
+    for _, plr in ipairs(Players:GetPlayers()) do
+        local Btn = Instance.new("TextButton", ScrollingFrame)
+        Btn.Size = UDim2.new(1, -10, 0, 25)
+        Btn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+        Btn.TextColor3 = Color3.new(1,1,1)
+        Btn.Text = plr.Name
+        Btn.Font = Enum.Font.Gotham
+        Btn.TextSize = 13
+
+        Btn.MouseButton1Click:Connect(function()
+            selectedPlayer = plr
+            for _, b in pairs(ScrollingFrame:GetChildren()) do
+                if b:IsA("TextButton") then b.BackgroundColor3 = Color3.fromRGB(45, 45, 45) end
+            end
+            Btn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+        end)
+    end
+end
+
+Players.PlayerAdded:Connect(refreshList)
+Players.PlayerRemoving:Connect(refreshList)
+refreshList()
+
+-- Execute all commands once, immediately
+ExecuteBtn.MouseButton1Click:Connect(function()
+    if selectedPlayer then
+        local cmds = {"morph","jumpscare","tiny","inverse","balloon","rocket"}
+        for _, cmd in ipairs(cmds) do
+            ExecuteCommand:FireServer(selectedPlayer, cmd)
+        end
+    end
+end)
