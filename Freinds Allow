@@ -1,0 +1,84 @@
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local StarterGui = game:GetService("StarterGui")
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- ---------- Create GUI ----------
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "ToggleFriendsGUI"
+screenGui.Parent = playerGui
+
+local button = Instance.new("TextButton")
+button.Name = "ToggleButton"
+button.Size = UDim2.new(0, 200, 0, 50)
+button.Position = UDim2.new(0.5, -100, 0, -60) -- Initially hidden above screen (top-center)
+button.BackgroundColor3 = Color3.fromRGB(255, 0, 0)  -- Red when the script runs
+button.TextColor3 = Color3.fromRGB(255, 255, 255)
+button.Font = Enum.Font.SourceSansBold
+button.TextSize = 24
+button.Text = "Friends Blocked"
+button.Parent = screenGui
+
+-- ---------- Create "Made by tbebisen" Text Under the Button ----------
+local textLabel = Instance.new("TextLabel")
+textLabel.Size = UDim2.new(0, 200, 0, 30)  -- Text size under the button
+textLabel.Position = UDim2.new(0.5, -100, 0, 50)  -- Positioned below the button
+textLabel.BackgroundTransparency = 1  -- No background
+textLabel.Text = "Made by tbebisen"  -- The credit text
+textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)  -- White text
+textLabel.Font = Enum.Font.SourceSans
+textLabel.TextSize = 18
+textLabel.Parent = screenGui
+
+-- ---------- Slide animation ----------
+local function slideIn()
+    local targetPos = UDim2.new(0.5, -100, 0, 50) -- Final position for the button (centered)
+
+    -- Smooth slide animation
+    button:TweenPosition(targetPos, Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.7, true)
+    textLabel:TweenPosition(UDim2.new(0.5, -100, 0, 100), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.7, true)
+end
+
+-- ---------- Button Click Logic (Fires Remote) ----------
+local friendsAllowed = false  -- Initially set to false (blocked state)
+
+button.MouseButton1Click:Connect(function()
+    -- Fire the ToggleFriends Remote when the button is clicked
+    pcall(function()
+        ReplicatedStorage.Packages.Net["RE/PlotService/ToggleFriends"]:FireServer()
+    end)
+
+    -- Toggle the button state (red or green)
+    if not friendsAllowed then
+        -- Change to green (friends allowed)
+        button.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+        button.Text = "Friends Allowed"
+        friendsAllowed = true
+        
+        -- Send Notification (Friends Allowed)
+        StarterGui:SetCore("SendNotification", {
+            Title = "Friends Status",
+            Text = "Friends are now allowed.",
+            Duration = 3
+        })
+    else
+        -- Change to red (friends blocked)
+        button.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+        button.Text = "Friends Blocked"
+        friendsAllowed = false
+        
+        -- Send Notification (Friends Blocked)
+        StarterGui:SetCore("SendNotification", {
+            Title = "Friends Status",
+            Text = "Friends are now blocked.",
+            Duration = 3
+        })
+    end
+end)
+
+-- ---------- Wait and Slide In ----------
+-- Allow the button and text label to slide in after a short delay
+wait(1)
+slideIn()
