@@ -1,0 +1,161 @@
+-- SERVICES
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local hrp = character:WaitForChild("HumanoidRootPart")
+
+-- REMOTE EVENT
+local ToggleFriends = ReplicatedStorage
+	.Packages.Net["RE/PlotService/ToggleFriends"]
+
+-- SETTINGS
+local RADIUS = 55
+local waypoint = nil
+local detectionRunning = false
+local playersInside = {}
+
+--------------------------------------------------
+-- GUI
+--------------------------------------------------
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "WaypointGui"
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
+
+-- RADIUS TEXTBOX
+local radiusBox = Instance.new("TextBox")
+radiusBox.Size = UDim2.new(0, 200, 0, 40)
+radiusBox.Position = UDim2.new(0.5, -100, 0.83, 0)
+radiusBox.PlaceholderText = "Radius (e.g. 40)"
+radiusBox.Text = tostring(RADIUS)
+radiusBox.TextScaled = true
+radiusBox.BackgroundColor3 = Color3.fromRGB(25,25,25)
+radiusBox.TextColor3 = Color3.fromRGB(255,255,255)
+radiusBox.ClearTextOnFocus = false
+radiusBox.Parent = gui
+
+-- SET WAYPOINT BUTTON
+local setButton = Instance.new("TextButton")
+setButton.Size = UDim2.new(0, 200, 0, 50)
+setButton.Position = UDim2.new(0.5, -210, 0.9, -25)
+setButton.Text = "Set Waypoint"
+setButton.TextScaled = true
+setButton.BackgroundColor3 = Color3.fromRGB(40,40,40)
+setButton.TextColor3 = Color3.fromRGB(255,255,255)
+setButton.Parent = gui
+
+-- START BUTTON
+local startButton = Instance.new("TextButton")
+startButton.Size = UDim2.new(0, 200, 0, 50)
+startButton.Position = UDim2.new(0.5, 10, 0.9, -25)
+startButton.Text = "Start"
+startButton.TextScaled = true
+startButton.BackgroundColor3 = Color3.fromRGB(0,120,0)
+startButton.TextColor3 = Color3.fromRGB(255,255,255)
+startButton.Parent = gui
+
+--------------------------------------------------
+-- RADIUS VISUAL (SPHERE)
+--------------------------------------------------
+
+local radiusSphere = Instance.new("Part")
+radiusSphere.Shape = Enum.PartType.Ball
+radiusSphere.Anchored = true
+radiusSphere.CanCollide = false
+radiusSphere.CanTouch = false
+radiusSphere.CanQuery = false
+radiusSphere.Material = Enum.Material.Neon
+radiusSphere.Color = Color3.fromRGB(170, 0, 255)
+radiusSphere.Transparency = 0.6
+radiusSphere.Name = "WaypointRadius"
+radiusSphere.Parent = Workspace
+
+local function updateRadiusVisual()
+	radiusSphere.Size = Vector3.new(RADIUS * 2, RADIUS * 2, RADIUS * 2)
+	if waypoint then
+		radiusSphere.Position = waypoint
+	end
+end
+
+updateRadiusVisual()
+
+--------------------------------------------------
+-- TEXTBOX LOGIC
+--------------------------------------------------
+
+local function updateRadiusFromBox()
+	local number = tonumber(radiusBox.Text)
+	if number and number > 0 then
+		RADIUS = math.clamp(number, 5, 500)
+		radiusBox.Text = tostring(RADIUS)
+		updateRadiusVisual()
+		print("Radius set to:", RADIUS)
+	else
+		radiusBox.Text = tostring(RADIUS)
+	end
+end
+
+radiusBox.FocusLost:Connect(updateRadiusFromBox)
+
+--------------------------------------------------
+-- BUTTON LOGIC
+--------------------------------------------------
+
+setButton.MouseButton1Click:Connect(function()
+	updateRadiusFromBox()
+
+	waypoint = hrp.Position
+	setButton.Text = "Waypoint Set!"
+
+	radiusSphere.Position = waypoint
+
+	print("Waypoint saved:", waypoint)
+end)
+
+startButton.MouseButton1Click:Connect(function()
+	if waypoint then
+		detectionRunning = true
+		startButton.Text = "Running..."
+		startButton.BackgroundColor3 = Color3.fromRGB(120,120,120)
+		startButton.Active = false
+		print("Detection started")
+	else
+		warn("Set waypoint first!")
+	end
+end)
+
+--------------------------------------------------
+-- ENTER / EXIT CHECK
+--------------------------------------------------
+
+RunService.Heartbeat:Connect(function()
+	if not detectionRunning or not waypoint then return end
+
+	for _, otherPlayer in ipairs(Players:GetPlayers()) do
+		if otherPlayer ~= player and otherPlayer.Character then
+			local otherHRP = otherPlayer.Character:FindFirstChild("HumanoidRootPart")
+			if otherHRP then
+				local distance = (otherHRP.Position - waypoint).Magnitude
+
+				-- ENTER
+				if distance <= RADIUS and not playersInside[otherPlayer] then
+					playersInside[otherPlayer] = true
+					print(otherPlayer.Name .. " ENTERED")
+					ToggleFriends:FireServer()
+				end
+
+				-- EXIT
+				if distance > RADIUS and playersInside[otherPlayer] then
+					playersInside[otherPlayer] = nil
+					print(otherPlayer.Name .. " LEFT")
+					ToggleFriends:FireServer()
+				end
+			end
+		end
+	end
+end)
